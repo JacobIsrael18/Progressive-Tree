@@ -11,6 +11,7 @@
 @interface ProgressiveTree : NSObject
 
 -(NSObject*) findObjectWithKey:(uint64_t) key;
+// addObject: nil  withKey:    means remove that Object
 -(void) addObject:(NSObject*) object withKey:(uint64_t) key;
 -(void) removeObjectWithKey:(uint64_t) key;
 
@@ -19,14 +20,14 @@
 
 /* Key: Value iteration
  This is like asking for all keys and values,
- with the IMPORTANT exception that the Array is always retruned in order of increasing value.
- This is because the Leafs of the Tree are Naturally in order.
+ with the IMPORTANT exception that the Array is always returned in order of increasing value.
+ This is because the Leaves of the Tree are Naturally in order.
  
  __Example___
  ProgressiveTree* progressiveTree;
  NSArray<ProgressiveLeafNode*>* array = [progressiveTree allLeafNodes];
  for(ProgressiveLeafNode* node in array){
-    uint64_t key = [node value];
+    uint64_t key = [node key];
     NSObject* value = [node object];
  //           . . .  do something here
  }                                      */

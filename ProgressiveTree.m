@@ -43,6 +43,14 @@
  @function  addObject:  WithKey:
  ===================================*/
 -(void) addObject:(NSObject*) object withKey:(uint64_t) key{
+    
+    if(object == nil){
+        // addObject: nil  withKey:  
+        // means remove that Object
+        [self removeObjectWithKey: key];
+        return;
+    }
+    
     ProgressiveLeafNode* newLeafNode = [[ProgressiveLeafNode alloc]initWithObject: object andKey:key];
     
     if(topMostChild == nil){
