@@ -2,10 +2,9 @@
   ProgressiveTree.m
   
   Created by Jacob Israel on 3/13/18.
-  Copyright © 2018 Jacob Israel. All rights reserved.
+  Copyright  © 2018 - ∞  Jacob Israel . All rights reserved.
 ******************************************/
 #import "ProgressiveTree.h"
-#import "ProgressiveLeafNode.h"
 #import "ProgressiveInternalNode.h"
 
 @implementation ProgressiveTree{
@@ -14,7 +13,7 @@
 }
 
 /*================================
- @function
+ @function init
  ===================================*/
 -(instancetype) init{
     self = [super init];
@@ -27,13 +26,13 @@
 }
 
 /*================================
- @function       findObjectWithValue:
+ @function       findObjectWithKey:
  ===================================*/
--(NSObject*) findObjectWithValue:(uint64_t) value{
+-(NSObject*) findObjectWithKey:(uint64_t) key{
     if([self theTopMostChildIsANode]){
-        return [(ProgressiveInternalNode*)topMostChild findObjectWithValue: value];
+        return [(ProgressiveInternalNode*)topMostChild findObjectWithKey: key];
     }
-    else if(topMostChild != nil && [topMostChild value] == value){    // topMostChild is s Leaf
+    else if(topMostChild != nil && [topMostChild key] == key){    // topMostChild is s Leaf
         // It has the correct value
         return [(ProgressiveLeafNode*)topMostChild object];
     }
@@ -41,17 +40,17 @@
 }
 
 /*================================
- @function  addObject:  withValue:
+ @function  addObject:  WithKey:
  ===================================*/
--(void) addObject:(NSObject*) object withValue:(uint64_t) value{
-    ProgressiveLeafNode* newLeafNode = [[ProgressiveLeafNode alloc]initWithObject: object andValue:value];
+-(void) addObject:(NSObject*) object withKey:(uint64_t) key{
+    ProgressiveLeafNode* newLeafNode = [[ProgressiveLeafNode alloc]initWithObject: object andKey:key];
     
     if(topMostChild == nil){
         topMostChild = newLeafNode;
         return;
     }
     
-    uint64_t topMostChildValue = [topMostChild value];
+    uint64_t topMostChildKey = [topMostChild key];
     
     if([self theTopMostChildIsANode]){
         ProgressiveInternalNode* topMostChildNode = (ProgressiveInternalNode*) topMostChild;
@@ -59,14 +58,14 @@
         uint64_t checkBit = HIGH_BIT;
         
         //  See if we need an intermediate node (to be the new topMostChildNode)
-        while ((value & checkBit) == (topMostChildValue & checkBit) && checkBit > childIndexBit) {
+        while ((key & checkBit) == (topMostChildKey & checkBit) && checkBit > childIndexBit) {
             checkBit >>= 1;
         }
         
         if(checkBit <= childIndexBit){
             /* We do NOT need an intermediate node
              so just have the child Node do the work. */
-            [topMostChildNode addObject: object withValue: value];
+            [topMostChildNode addObject: object withKey: key];
             return;
         }
         else{   // We DO need an intermediate node
@@ -76,9 +75,9 @@
         return;
     }
     
-    if(value == topMostChildValue){
+    if(key == topMostChildKey){
         // REPLACEMENT
-        topMostChild = [[ProgressiveLeafNode alloc]initWithObject: object andValue: value];
+        topMostChild = [[ProgressiveLeafNode alloc]initWithObject: object andKey: key];
     }
     else{
         // topMostChild is a Leaf. Add a new node
@@ -88,26 +87,26 @@
 }
 
 /*================================
- @function  removeObjectWithValue:
+ @function  removeObjectWithKey:
  ===================================*/
--(void) removeObjectWithValue:(uint64_t)value{
+-(void) removeObjectWithKey:(uint64_t) key{
     if([self theTopMostChildIsANode]){
         // First try to remove one of the child's leafs
         ProgressiveInternalNode* topMostNode = (ProgressiveInternalNode*) topMostChild;
         
-        if([topMostNode childZeroIsLeafWithValue: value]){
+        if([topMostNode childZeroIsLeafWithKey: key]){
             topMostChild = [topMostNode getChildOne];
         }
-        else if([topMostNode childOneIsLeafWithValue: value]){
+        else if([topMostNode childOneIsLeafWithKey: key]){
              topMostChild = [topMostNode getChildZero];
         }
         else{
             // The child does not have a Leaf with this value.
             // So, pass the call onto the child
-            [topMostNode removeObjectWithValue: value];
+            [topMostNode removeObjectWithKey: key];
         }
     } //   __topMostChild is a Leaf__
-    else if([topMostChild value] == value){
+    else if([topMostChild key] == key){
         topMostChild = nil;
     }
 }
@@ -119,8 +118,6 @@
     return [topMostChild isKindOfClass: [ProgressiveInternalNode class]];
 }
 
-
-
 /*================================
  @function  isEmpty
  ===================================*/
@@ -129,14 +126,14 @@
 }
 
 /*================================
- @function 
+ @function  topNode
  ===================================*/
 -(ProgressiveNode*) topNode{
     return topMostChild;
 }
 
 /*================================
- @function
+ @function   getTreeDepth
  ===================================*/
 -(uint16_t) getTreeDepth{
     if(topMostChild == nil){
@@ -150,7 +147,21 @@
 }
 
 /*================================
- @function
+ @function       allLeafNodes
+ ===================================*/
+-(NSArray<ProgressiveLeafNode*>*) allLeafNodes{
+    if(topMostChild == nil){
+        return nil;
+    }
+    if([self theTopMostChildIsANode]){
+        return [(ProgressiveInternalNode*)topMostChild allLeafNodes];
+    }
+    return @[(ProgressiveLeafNode*) topMostChild];
+}
+
+#pragma mark -  Serialization
+/*================================
+ @function      dictionaryRepresentation
  ===================================*/
 -(NSDictionary*) dictionaryRepresentation{
     if(topMostChild == nil){
@@ -160,11 +171,16 @@
 }
 
 /*================================
- @function
+ @function     initFromDictionaryRepresentation:
  ===================================*/
 -(instancetype) initFromDictionaryRepresentation:(NSDictionary*) dictionary{
     self = [super init];
-    if(dictionary[@"myObject"] == nil){
+    
+    if(self == nil || dictionary == nil){
+        return  nil;
+    }
+    
+    if(dictionary[MY_OBJECT_KEY] == nil){
         topMostChild = [[ProgressiveInternalNode alloc]initFromDictionaryRepresentation: dictionary];
     }
     else{

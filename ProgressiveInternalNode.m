@@ -2,19 +2,17 @@
  ProgressiveInternalNode.m
  
  Created by Jacob Israel on 3/12/18.
- Copyright © 2018 - ထ Jacob Israel. All rights reserved.
+ Copyright © 2018 - ∞ Jacob Israel. All rights reserved.
  ******************************************/
 #import "ProgressiveInternalNode.h" 
-#import "ProgressiveLeafNode.h"
 
-#define INDEX_BIT_KEY @"indexBit"
-#define CHILD_ZERO_KEY @"childZero"
-#define CHILD_ONE_KEY @"childOne"
+const NSString* CHILD_ZERO_KEY = @"childZero";
+const NSString* CHILD_ONE_KEY = @"childOne";
 
 const uint64_t HIGH_BIT = 1ULL << 63;
 
 @interface ProgressiveInternalNode(ProtectedMethods)
--(void) setMyValue:(uint64_t) newValue;
+-(void) setMyKey:(uint64_t) newKey;
 @end
 
 @implementation ProgressiveInternalNode{
@@ -24,16 +22,17 @@ const uint64_t HIGH_BIT = 1ULL << 63;
     ProgressiveNode* childOne;
 }
 
+#pragma mark -
 /*================================
  @function    initWithChild:  andChild:
  @discussion
  ===================================*/
 -(instancetype) initWithChild:(ProgressiveNode*) firstChild andChild:(ProgressiveNode *)secondChild{
-    self = [super initWithValue: [firstChild value]];
+    self = [super initWithKey: [firstChild key]];
     
     // It is Illegal to have two children with the same value
     // Also, this would break the tree.
-    if(self == nil || [firstChild value] == [secondChild value]){
+    if(self == nil || [firstChild key] == [secondChild key]){
         return nil;
     } 
     
@@ -43,9 +42,9 @@ const uint64_t HIGH_BIT = 1ULL << 63;
     childZero = secondChild;
     childOne = firstChild;
 
-    [self updateIndexBit];
+    [self updateMyKeyAndIndexBit];
     
-    if( ([firstChild value] & indexBit) == 0 ){ // firstChild goes to Zero position
+    if( ([firstChild key] & indexBit) == 0 ){ // firstChild goes to Zero position
         // The indexBit is good. But, we need to swap the children.
         childZero = firstChild;
         childOne = secondChild;
@@ -53,6 +52,7 @@ const uint64_t HIGH_BIT = 1ULL << 63;
     return self;
 }
 
+#pragma mark -
 /*================================
  @function  indexBit
  ===================================*/
@@ -72,17 +72,16 @@ const uint64_t HIGH_BIT = 1ULL << 63;
  Then:
  indexBit = 00001000
  ===================================*/
--(void) updateIndexBit{
-    uint64_t value0 = [childZero value];
-    uint64_t value1 = [childOne value];
-    
+-(void) updateMyKeyAndIndexBit{
+    uint64_t key0 = [childZero key];
+    uint64_t key1 = [childOne key];
     
     indexBit = HIGH_BIT;
     
-    while ((value0 & indexBit) == (value1 & indexBit) && indexBit > 1) {
+    while ((key0 & indexBit) == (key1 & indexBit) && indexBit > 1) {
         indexBit >>= 1;
     }
-    [self setMyValue: value0];
+    [self setMyKey: key0];
 }
 
 /*================================
@@ -107,7 +106,7 @@ const uint64_t HIGH_BIT = 1ULL << 63;
 }
 
 /*================================
- @function    findObjectWithValue:
+ @function    findObjectWithKey:
  @discussion
  We take advantage of the Tree structure to use recursion to find the value.
  Notice that this is essentially a squashed binary tree.
@@ -119,20 +118,20 @@ const uint64_t HIGH_BIT = 1ULL << 63;
  @return The object that has the given value.
  Return nil if the value is not found.
  ===================================*/
--(NSObject*) findObjectWithValue:(uint64_t) value{
+-(NSObject*) findObjectWithKey:(uint64_t) key{
     
    // 1. See if we should look at child Zero or Child One
-    if((indexBit & value) == 0){ // childZero
+    if((indexBit & key) == 0){ // childZero
         // 2. Is the child a Leaf or an internal Node ?
         if([self childZeroIsInternalNode]){
             // childZeroIschildZeroIsNode == YES
             // The child is a Node. Have the Node process the request.
-            return [(ProgressiveInternalNode*)childZero findObjectWithValue: value];
+            return [(ProgressiveInternalNode*)childZero findObjectWithKey: key];
         }
         else{
             // The child is a leaf. It either contains the value
             // or the value is not in the Tree
-            if([childZero value] == value){ //    childZero is a Leaf
+            if([childZero key] == key){ //    childZero is a Leaf
                 return [(ProgressiveLeafNode*)childZero object];
             }   // else
             return nil;
@@ -140,10 +139,10 @@ const uint64_t HIGH_BIT = 1ULL << 63;
     }
     else{ // childOneIsNode == YES
         if([self childOneIsInternalNode]){
-            return [(ProgressiveInternalNode*)childOne findObjectWithValue: value];
+            return [(ProgressiveInternalNode*)childOne findObjectWithKey: key];
         }
         else{   // (indexBit & value) != 0      childOne is a Leaf
-            if([childOne value] == value){
+            if([childOne key] == key){
                 return [(ProgressiveLeafNode*)childOne object];
             }    // else
             return nil;
@@ -152,13 +151,13 @@ const uint64_t HIGH_BIT = 1ULL << 63;
 }
 
 /*================================
- @function     addObject:    withValue:
+ @function     addObject:    withKey:
  @discussion
  If the object's value already exists, the old object will be
  overwritten with the new object.
  ===================================*/
--(void) addObject:(NSObject*) object withValue:(uint64_t) value{
-    ProgressiveLeafNode* nodeToAdd = [[ProgressiveLeafNode alloc]initWithObject:object andValue: value];
+-(void) addObject:(NSObject*) object withKey:(uint64_t) key{
+    ProgressiveLeafNode* nodeToAdd = [[ProgressiveLeafNode alloc]initWithObject:object andKey: key];
     [self addLeafNode: nodeToAdd];
 }
 
@@ -166,11 +165,11 @@ const uint64_t HIGH_BIT = 1ULL << 63;
  @function     addLeafNode:
  ===================================*/
 -(void) addLeafNode:(ProgressiveLeafNode*) nodeToAdd{
-    uint64_t value = [nodeToAdd value];
+    uint64_t value = [nodeToAdd key];
     
     if((indexBit & value) == 0){ // Add to the Zero side
         
-        if( [childZero value] == value && [self childZeroIsInternalNode] == NO){
+        if( [childZero key] == value && [self childZeroIsInternalNode] == NO){
             // This is a Leaf child with the same value as the object
             // So, this is a Replacement
             childZero = nodeToAdd;
@@ -180,7 +179,7 @@ const uint64_t HIGH_BIT = 1ULL << 63;
         [self addLeafNode: nodeToAdd toChild: childZero];
     }
     else{  // (indexBit & value) != 0     // Add to the One side
-        if([childOne value] == value && [self childOneIsInternalNode] == NO){
+        if([childOne key] == value && [self childOneIsInternalNode] == NO){
             //  This is a Replacement
             childOne = nodeToAdd;
             return;
@@ -226,8 +225,8 @@ const uint64_t HIGH_BIT = 1ULL << 63;
         // 001010100 <=== new value
         // 000001000 my index
         // 000000010 child index
-        uint64_t objectValue = [nodeToAdd value];
-        uint64_t childValue = [child value];
+        uint64_t objectValue = [nodeToAdd key];
+        uint64_t childValue = [child key];
         uint64_t childIndexBit = [(ProgressiveInternalNode*)child indexBit];
         uint64_t checkBit = indexBit;//  HIGH_BIT;
  
@@ -254,7 +253,7 @@ const uint64_t HIGH_BIT = 1ULL << 63;
                 childOne = intermediateNode;
             }
             // With a new structure, our index bit is wrong.
-            [self updateIndexBit];
+            [self updateMyKeyAndIndexBit];
         }
     }
     else{ // _____The child is a Leaf_____
@@ -270,26 +269,26 @@ const uint64_t HIGH_BIT = 1ULL << 63;
             childOne = newNode;
         }
         // With a new structure, our index bit may be wrong.
-        [self updateIndexBit];
+        [self updateMyKeyAndIndexBit];
     }
 }
 
 /*================================
- @function
+ @function  childZeroIsLeafWithKey
  ===================================*/
--(BOOL) childZeroIsLeafWithValue:(uint64_t) value{
-    return [self childZeroIsInternalNode] == NO && [childZero value] == value;
+-(BOOL) childZeroIsLeafWithKey:(uint64_t) value{
+    return [self childZeroIsInternalNode] == NO && [childZero key] == value;
 }
 
 /*================================
- @function
+ @function  childOneIsLeafWithKey
  ===================================*/
--(BOOL) childOneIsLeafWithValue:(uint64_t) value{
-    return [self childOneIsInternalNode] == NO && [childOne value] == value;
+-(BOOL) childOneIsLeafWithKey:(uint64_t) value{
+    return [self childOneIsInternalNode] == NO && [childOne key] == value;
 }
 
 /*================================
- @function
+ @function  getDepth
  ===================================*/
 -(uint16_t) getDepth{
     uint16_t depth0 = 0;
@@ -305,14 +304,14 @@ const uint64_t HIGH_BIT = 1ULL << 63;
 }
 
 /*================================
- @function
+ @function    getChildZero
  ===================================*/
 -(ProgressiveNode*) getChildZero{
     return childZero;
 }
 
 /*================================
- @function
+ @function   getChildOne
  ===================================*/
 -(ProgressiveNode*) getChildOne{
     return childOne;
@@ -327,46 +326,70 @@ const uint64_t HIGH_BIT = 1ULL << 63;
  The parent must do this.
  This is an issue for the Top-most Node.
  ===================================*/
--(void) removeObjectWithValue:(uint64_t) objectValue{
+-(void) removeObjectWithKey:(uint64_t) key{
    
-    uint64_t objectValueAndIndexBit = (objectValue & indexBit);
+    uint64_t objectValueAndIndexBit = (key & indexBit);
     
     if(objectValueAndIndexBit == 0 && [self childZeroIsInternalNode]){ // __ZERO__
         ProgressiveInternalNode* nodeZero = (ProgressiveInternalNode*)childZero;
         
-        if([nodeZero childZeroIsLeafWithValue: objectValue] ){
+        if([nodeZero childZeroIsLeafWithKey: key] ){
             /* Our childZero's childZero is to be removed.
              That means that our new childZero is our childZero's childOne      */
             childZero = [nodeZero getChildOne];
         }
-        else if([nodeZero childOneIsLeafWithValue: objectValue] ){
+        else if([nodeZero childOneIsLeafWithKey: key] ){
             childZero = [nodeZero getChildZero];
         }
         else{
             // Neither child is a match. So, pass on the request.
-            [nodeZero removeObjectWithValue: objectValue];
+            [nodeZero removeObjectWithKey: key];
         }
     }
     else if(objectValueAndIndexBit != 0 && [self childOneIsInternalNode]){ // __ONE__
         ProgressiveInternalNode* nodeOne = (ProgressiveInternalNode*)childOne;
         
-        if([nodeOne childZeroIsLeafWithValue: objectValue] ){
+        if([nodeOne childZeroIsLeafWithKey: key] ){
             childOne = [nodeOne getChildOne];
         }
-        else if([nodeOne childOneIsLeafWithValue: objectValue] ){
+        else if([nodeOne childOneIsLeafWithKey: key] ){
             childOne = [nodeOne getChildZero];
         }
         else{
             // Neither child is a match. So, pass on the request.
-            [nodeOne removeObjectWithValue: objectValue];
+            [nodeOne removeObjectWithKey: key];
         }
     }
 }
 
+/*================================
+ @function    allLeafNodes
+ ===================================*/
+-(NSArray<ProgressiveLeafNode*>*) allLeafNodes{
+    NSMutableArray* output = [NSMutableArray new];
+    
+    if([self childZeroIsInternalNode]){
+        [output addObjectsFromArray: [(ProgressiveInternalNode*)childZero allLeafNodes]];
+    }
+    else{
+        [output addObject: childZero];
+    }
+    
+    if([self childOneIsInternalNode]){
+        [output addObjectsFromArray: [(ProgressiveInternalNode*)childOne allLeafNodes]];
+    }
+    else{
+        [output addObject: childOne];
+    }
+    return output;
+}
+
+#pragma mark -  Serialization
+/*================================
+ @function    dictionaryRepresentation
+ ===================================*/
 -(NSDictionary*) dictionaryRepresentation{
     NSMutableDictionary* output = [NSMutableDictionary new];
-    
-    output[INDEX_BIT_KEY] = [NSNumber numberWithUnsignedInteger: indexBit];
     
     output[CHILD_ZERO_KEY] = [childZero dictionaryRepresentation];
     
@@ -375,26 +398,29 @@ const uint64_t HIGH_BIT = 1ULL << 63;
     return output;
 }
 
+/*================================
+ @function   initFromDictionaryRepresentation:
+ ===================================*/
 -(instancetype) initFromDictionaryRepresentation:(NSDictionary*) dictionary{
     self = [super init];
     
-    indexBit = [(NSNumber*)dictionary[INDEX_BIT_KEY]  unsignedIntegerValue];
-    
     NSDictionary* childZeroDictionary = dictionary[CHILD_ZERO_KEY];
     NSDictionary* childOneDictionary = dictionary[CHILD_ONE_KEY];
-    if( childZeroDictionary[@"myObject"] != nil){
-        childZero = [[ProgressiveLeafNode alloc]initFromDictionaryRepresentation: dictionary[CHILD_ZERO_KEY]];
+    if( childZeroDictionary[MY_OBJECT_KEY] != nil){
+        childZero = [[ProgressiveLeafNode alloc]initFromDictionaryRepresentation: childZeroDictionary];
     }
     else{
-        childZero = [[ProgressiveInternalNode alloc]initFromDictionaryRepresentation: dictionary[CHILD_ZERO_KEY]];
+        childZero = [[ProgressiveInternalNode alloc]initFromDictionaryRepresentation: childZeroDictionary];
     }
 
-    if(childOneDictionary[@"myObject"] != nil){
-        childOne = [[ProgressiveLeafNode alloc]initFromDictionaryRepresentation: dictionary[CHILD_ONE_KEY]];
+    if(childOneDictionary[MY_OBJECT_KEY] != nil){
+        childOne = [[ProgressiveLeafNode alloc]initFromDictionaryRepresentation: childOneDictionary];
     }
     else{
-        childOne = [[ProgressiveInternalNode alloc]initFromDictionaryRepresentation: dictionary[CHILD_ONE_KEY]];
+        childOne = [[ProgressiveInternalNode alloc]initFromDictionaryRepresentation: childOneDictionary];
     }
+    
+    [self updateMyKeyAndIndexBit];
     return self;
 }
 

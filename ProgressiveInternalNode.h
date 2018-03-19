@@ -8,9 +8,9 @@
  i.e. He does not know what problem he is trying to solve.
  
  In a ProgressiveTree:
-> A Leaf is a Single Child carrying one object with one value.
+> A Leaf is a Single Child carrying one object with one key.
  Programatically, it is any NSObject that conforms to ProgressiveTreeChild,
- which means it has the  -(uint64_t) value{ }  method.
+ which means it has the  -(uint64_t) key{ }  method.
  
  > An internal node is a ProgressiveInternalNode. This class also conforms to ProgressiveTreeChild.
  But, an internal node always has 2 children:
@@ -20,27 +20,28 @@
  
  The ProgressiveInternalNode represents the most basic element of a ProgressiveTree.
  It is a 'container' for two 'buckets' (bucket Zero & bucket One)
- It 'hashes' into these buckets based on whether an Object's value has a Zero or One at a given bit position (bitIndex)
- Unlike regular hashing, this mechanism is 100% Deterministic. It is NOT based on some random juggling of the value to create a hash.
+ It 'hashes' into these buckets based on whether an Object's key has a Zero or One at a given bit position (bitIndex)
+ Unlike regular hashing, this mechanism is 100% Deterministic. It is NOT based on some random juggling of the key to create a hash.
  More importantly, it is a Tree of ProgressiveInternalNodes (parent-child-grandchild), that work together to implement Progressive Hashing.
  
  ___Progressive Hashing___  A specialized approach to hashing where items are placed in 'buckets' based on a 'Hash'
- of their value,
+ of their key,
 *** AND ***
  any 'bucket' that contains more than one item is hashed further (by a different method) into other 'buckets'
  The hashing is GUARANTEED TO STOP when:
  A. No buckets have more than one item    OR
- B. No further hashing is possible, meaning that multiple items in the same bucket must have the same exact value.
+ B. No further hashing is possible, meaning that multiple items in the same bucket must have the same exact key.
  (However, the ProgressiveTree does not allow multiple items in the same bucket,
- because it is coded to behave like a Dictionary. A new item with the same exact value replaces the old item).
+ because it is coded to behave like a Dictionary. A new item with the same exact key replaces the old item).
  For this to work, the hashing function MUST be Deterministic (you cannot use random hash functions, because there is no Leaf case).
- The simplest 'Hash' function possible is to check a single bit in a value (it will be 1 or 0) and place the Object in the appropriate bucket.
+ The simplest 'Hash' function possible is to check a single bit in a key (it will be 1 or 0) and place the Object in the appropriate bucket.
  
  Created by Jacob Israel on 3/12/18.
- Copyright © 2018 - ထ Jacob Israel. All rights reserved.
+ Copyright © 2018 - ∞ Jacob Israel. All rights reserved.
  ******************************************/
 #import <Foundation/Foundation.h>
 #import "ProgressiveNode.h"
+#import "ProgressiveLeafNode.h"
 
 extern const uint64_t HIGH_BIT;
 
@@ -48,9 +49,9 @@ extern const uint64_t HIGH_BIT;
 -(instancetype) initWithChild:(ProgressiveNode*) firstChild andChild:(ProgressiveNode*) secondChild;
 
 //_____Find, Add, Remove__________
--(NSObject*) findObjectWithValue:(uint64_t) value;
--(void) addObject:(NSObject*) object withValue:(uint64_t) value;
--(void) removeObjectWithValue:(uint64_t) objectValue;
+-(NSObject*) findObjectWithKey:(uint64_t) key;
+-(void) addObject:(NSObject*) object withKey:(uint64_t) key;
+-(void) removeObjectWithKey:(uint64_t) key;
 
 -(uint64_t) indexBit;
 -(ProgressiveNode*) getChildZero;
@@ -59,8 +60,8 @@ extern const uint64_t HIGH_BIT;
 -(BOOL) childOneIsInternalNode;
 -(BOOL) bothChildrenAreInternalNodes;
 
--(BOOL) childZeroIsLeafWithValue:(uint64_t) value;
--(BOOL) childOneIsLeafWithValue:(uint64_t) value;
+-(BOOL) childZeroIsLeafWithKey:(uint64_t) key;
+-(BOOL) childOneIsLeafWithKey:(uint64_t) key;
 -(uint16_t) getDepth;
- 
+-(NSArray<ProgressiveLeafNode*>*) allLeafNodes;
 @end
